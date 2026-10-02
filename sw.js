@@ -1,6 +1,6 @@
 // Broom Run service worker: makes the game installable and playable offline.
 // Bump VERSION whenever index.html or theme.js changes so players get the update.
-const VERSION = 'broomrun-v1';
+const VERSION = 'broomrun-v2';
 const CORE = ['./', 'index.html', 'theme.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {

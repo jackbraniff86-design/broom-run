@@ -42,7 +42,10 @@ window.THEME = {
   links: {
     site: 'https://jackbraniff86-design.github.io/broom-run/',
     daily5: 'https://thedaily5.co.uk',
-    newsletter: ''
+    // The Daily 5 Beehiiv signup page. Set its after-signup redirect to <site>#thanks-email.
+    newsletter: '',
+    // Tally feedback form. Set its after-submit redirect to <site>#thanks-feedback.
+    feedback: ''
   },
 
   modes: { daily: 'Daily Flight', free: 'Free Fly' },

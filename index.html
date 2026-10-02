@@ -140,6 +140,13 @@ p { margin: 0; line-height: 1.45; }
 .minor { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 14px; }
 .crosslink { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--edge); text-align: center; }
 .crosslink a { color: var(--amber-soft); font-weight: 700; text-underline-offset: 3px; }
+.earn { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 10px; background: rgba(0,0,0,.2); }
+.earn-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; font-size: 15px; }
+.earn-row small { color: var(--muted); }
+.earn-row b { color: var(--amber-soft); font-variant-numeric: tabular-nums; }
+.earn-row .btn { text-decoration: none; text-align: center; min-width: 84px; }
+.earn-row.done { opacity: .5; }
+.toast { position: absolute; z-index: 20; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); max-width: calc(100% - 32px); background: var(--amber); color: #24170a; font-weight: 800; padding: 10px 16px; border-radius: 999px; box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: none; text-align: center; }
 .school { gap: 16px; }
 .lore { display: flex; flex-direction: column; gap: 10px; max-width: 62ch; }
 .lore p { color: var(--parchment); font-size: 16px; }
@@ -171,6 +178,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
 <body>
 
 <div id="stage" tabindex="-1">
+  <div class="toast" id="toast" role="status" hidden></div>
   <canvas id="game" aria-label="Broom Run game area"></canvas>
 
   <div class="hud" id="hud" hidden>
@@ -205,6 +213,12 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
         <button class="btn" id="btnSchool" type="button">The school</button>
       </div>
       <p class="fine" id="homeFound" style="text-align:center"></p>
+      <div class="earn" id="earnCard">
+        <p class="eyebrow">Earn coins</p>
+        <div class="earn-row" id="earnEmail"><span>Join the newsletter</span><b>+100</b><a class="btn small" id="lnkEarnEmail" target="_blank" rel="noopener">Join</a></div>
+        <div class="earn-row" id="earnShare"><span>Share the game with a friend <small>(once a day)</small></span><b>+25</b><button class="btn small" id="btnEarnShare" type="button">Share</button></div>
+        <div class="earn-row" id="earnFeedback"><span>Tell us what you think</span><b>+50</b><a class="btn small" id="lnkEarnFeedback" target="_blank" rel="noopener">Feedback</a></div>
+      </div>
       <div class="minor">
         <button class="linkbtn" id="btnSound" type="button">Sound: off</button>
         <button class="linkbtn" id="btnInstall" type="button" hidden>Install the game</button>
@@ -335,6 +349,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       pity: { rare: 0, legend: 0 },
       streak: { count: 0, last: null },
       daily: { day: null, goes: 0, best: 0 },
+      rewards: { email: false, feedback: false, shareDay: null },
       sound: false
     };
   }
@@ -348,7 +363,8 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
         equipped: Object.assign(f.equipped, s.equipped || {}),
         pity: Object.assign(f.pity, s.pity || {}),
         streak: Object.assign(f.streak, s.streak || {}),
-        daily: Object.assign(f.daily, s.daily || {})
+        daily: Object.assign(f.daily, s.daily || {}),
+        rewards: Object.assign(f.rewards, s.rewards || {})
       });
     }
   } catch (e) {}
@@ -438,7 +454,8 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   }
 
   // Difficulty depends on world position only, so a seeded course is identical on every device.
-  const gapAt = m => H * (0.6 - 0.3 * Math.min(1, m / 2600));
+  // a wide, forgiving first 300 m for everyone, then the gap narrows from 60% to 30% of the screen
+  const gapAt = m => m < 300 ? H * .66 : H * (0.6 - 0.3 * Math.min(1, (m - 300) / 2600));
   const speedAt = m => BASE * (1 + Math.min(0.75, 0.00015 * m));
 
   function makeCourse(seed, attract) {
@@ -476,7 +493,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     const seg = { x, k: C.k, top: C.c - C.g / 2, bot: C.c + C.g / 2 };
     C.segs.push(seg); C.k++;
 
-    if (!C.attract && !C.passage && x >= C.nextObsX && m > 30 && m < C.nextPassageM - 25) spawnObstacle(C, seg, m);
+    if (!C.attract && !C.passage && x >= C.nextObsX && m > 60 && m < C.nextPassageM - 25) spawnObstacle(C, seg, m);
 
     // coin rows: riskier lines sit closer to the walls
     if (!C.coinRow && !C.passage && rng() < .03) { C.coinRow = 5 + Math.floor(rng() * 4); C.coinSide = rng() < .5 ? -1 : 1; C.coinFrac = .35 + rng() * .5; }
@@ -587,7 +604,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   let course = null, camX = 0, runTime = 0, speed = BASE;
   let player = { y: H / 2, vy: 0 }, holding = false;
   let coinsRun = 0, closeCount = 0, parts = [], texts = [], banners = [], shake = 0, lastResult = null;
-  let stats = flyStats();
+  let stats = flyStats(), started = false;
 
   function newCourse(seed, attract) {
     course = makeCourse(seed, attract);
@@ -620,6 +637,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       persist();
     }
     stats = flyStats();
+    started = false;
     newCourse(seed, false);
     player = { y: H / 2, vy: 0 };
     coinsRun = 0; closeCount = 0; parts = []; texts = []; banners = []; shake = 0;
@@ -849,10 +867,11 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       const blob = await cardBlob(renderCard(r, 1080, 1920, kind));
       const file = blob && new File([blob], 'broom-run.png', { type: 'image/png' });
       // some share targets drop the url when an image is attached, so the link also goes in the text
-      if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: full }); return; }
-      if (navigator.share) { await navigator.share({ text, url }); return; }
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: full }); grantReward('share'); return; }
+      if (navigator.share) { await navigator.share({ text, url }); grantReward('share'); return; }
     } catch (e) { if (e && e.name === 'AbortError') return; }
     copyText(full, btn, 'Copied: paste it to a friend');
+    grantReward('share');
   }
   async function saveCard(w, h, kind) {
     const blob = await cardBlob(renderCard(lastResult, w, h, kind));
@@ -976,8 +995,52 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
         : tpl(T.text.challengeIntro, { m: fmt(challenge.m), course: challengeCourse(challenge) }) + (challenge.day === today ? ' It uses one of your ' + DAILY_GOES + ' goes.' : '');
       $('btnChallenge').hidden = locked;
     }
+    renderEarn();
     $('btnInstall').hidden = !installPrompt;
     $('iosHint').hidden = !(isIOS && !isStandalone);
+  }
+  // Rewards. Email and feedback rewards are paid when the newsletter or form sends the player back
+  // to the game with #thanks-email or #thanks-feedback (set as the redirect after submitting).
+  const REWARD = { email: 100, share: 25, feedback: 50 };
+  function renderEarn() {
+    const rw = save.rewards, today = dayKey();
+    const setRow = (id, done, label) => { $(id).classList.toggle('done', done); const b = $(id).querySelector('.btn'); b.textContent = done ? (label || 'Done') : b.dataset.label || b.textContent; };
+    $('earnEmail').hidden = !T.links.newsletter;
+    $('lnkEarnEmail').href = T.links.newsletter || '#';
+    $('earnFeedback').hidden = !T.links.feedback;
+    $('lnkEarnFeedback').href = T.links.feedback || '#';
+    for (const id of ['lnkEarnEmail', 'btnEarnShare', 'lnkEarnFeedback']) { const b = $(id); if (!b.dataset.label) b.dataset.label = b.textContent; }
+    setRow('earnEmail', rw.email, 'Joined');
+    setRow('earnFeedback', rw.feedback, 'Thanks');
+    setRow('earnShare', rw.shareDay === today, 'Tomorrow');
+  }
+  function grantReward(kind) {
+    const rw = save.rewards;
+    if (kind === 'share') { if (rw.shareDay === dayKey()) return; rw.shareDay = dayKey(); }
+    else { if (rw[kind]) return; rw[kind] = true; }
+    save.coins += REWARD[kind]; persist();
+    toast('+' + REWARD[kind] + ' ' + T.currency.many + (kind === 'email' ? '. Welcome aboard!' : kind === 'feedback' ? '. Thanks for the feedback!' : ' for sharing'));
+    sfx.coin();
+    if (state === 'home') renderHome();
+  }
+  let toastTimer = null;
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3200); }
+  function checkThanks() {
+    const h = location.hash;
+    if (h === '#thanks-email' || h === '#thanks-feedback') {
+      history.replaceState(null, '', location.pathname + location.search);
+      grantReward(h === '#thanks-email' ? 'email' : 'feedback');
+      return true;
+    }
+    return false;
+  }
+  async function shareInvite(btn) {
+    const url = T.links.site, text = 'Fly a broom through an endless castle. Same course for everyone each day. Can you beat me?';
+    try {
+      if (navigator.share) { await navigator.share({ text, url }); grantReward('share'); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    copyText(text + ' ' + url, btn, 'Copied: paste it to a friend');
+    grantReward('share');
   }
   let installPrompt = null;
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1075,6 +1138,11 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     shake = Math.max(0, shake - dt * 30);
     if (state !== 'playing' && state !== 'home' && state !== 'shed' && state !== 'school') return;
     const playing = state === 'playing';
+    if (playing && !started) {
+      // the run waits for the first press, so nobody drops before they're ready
+      if (holding) started = true;
+      else { player.y = H / 2 + Math.sin(runTime * 3) * 6; player.vy = 0; return; }
+    }
     const m = camX / PXM;
     speed = playing ? speedAt(m) : 170;
     camX += speed * dt;
@@ -1086,9 +1154,10 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
 
     const px = camX + PX;
     if (playing) {
-      const up = 1650 * (1 + stats.lift), down = 1250 * (1 - stats.handling * .5);
+      const assist = save.flights < 3 && m < 300 ? .8 : 1;
+      const up = 1650 * (1 + stats.lift) * (assist < 1 ? .88 : 1), down = 1250 * (1 - stats.handling * .5) * assist;
       player.vy += (holding ? -up : down) * dt;
-      player.vy = clamp(player.vy, -470, 540 * (1 - stats.handling * .5));
+      player.vy = clamp(player.vy, -470 * (assist < 1 ? .85 : 1), 540 * (1 - stats.handling * .5) * assist);
       player.y += player.vy * dt;
     } else {
       const w = wallAt(C, px + 90);
@@ -1594,7 +1663,15 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       ctx.fillStyle = PAL.flame; ctx.fillText(tx.text, tx.x, tx.y);
     }
     ctx.globalAlpha = 1;
-    if (banners.length && state === 'playing') {
+    if (state === 'playing' && !started) {
+      ctx.globalAlpha = .75 + .25 * Math.sin(t * 5);
+      ctx.font = '400 ' + (W < 560 ? 26 : 32) + 'px "Uncial Antiqua", Georgia, serif';
+      ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 10;
+      ctx.fillStyle = PAL.flame; ctx.fillText('Hold to fly', W / 2, H * .5 - 70);
+      ctx.font = '700 16px "Alegreya Sans", sans-serif'; ctx.fillStyle = '#efe3c6';
+      ctx.fillText(save.flights < 3 ? 'Hold anywhere (or Space) to rise. Let go to drop.' : 'Tap, click or press Space', W / 2, H * .5 - 44);
+      ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    } else if (banners.length && state === 'playing') {
       const b = banners[0], a = Math.min(1, b.life * 2, (2.2 - b.life) * 5);
       ctx.globalAlpha = clamp(a, 0, 1);
       ctx.font = '400 ' + (W < 560 ? 26 : 32) + 'px "Uncial Antiqua", Georgia, serif';
@@ -1652,6 +1729,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   $('btnBoxContinue').onclick = () => { if (state === 'box' && boxRevealed) showResult(); };
   $('btnEquipNow').onclick = () => { const it = lastResult.reward.item; save.equipped[it.kind] = it.id; persist(); showResult(); };
   $('btnAgain').onclick = () => {
+    if (!lastResult) return;
     const r = lastResult, nm = nextMode(r.mode);
     if (nm === 'daily') startRun('daily', r.target ? { target: r.target } : {});
     else if (r.target && nm === 'challenge') startRun('challenge', r.opts);
@@ -1660,15 +1738,17 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   $('btnMenu').onclick = goHome;
   $('btnShare').onclick = e => shareResult('run', e.currentTarget);
   $('btnShareFind').onclick = e => shareResult('legendary', e.currentTarget);
-  $('btnCopyLink').onclick = e => copyText(shareText(lastResult) + ' \u{1F447} ' + shareLink(lastResult), e.currentTarget);
+  $('btnCopyLink').onclick = e => { copyText(shareText(lastResult) + ' \u{1F447} ' + shareLink(lastResult), e.currentTarget); grantReward('share'); };
+  $('btnEarnShare').onclick = e => shareInvite(e.currentTarget);
   $('btnSaveStory').onclick = () => saveCard(1080, 1920, 'run');
   $('btnSaveSquare').onclick = () => saveCard(1080, 1080, 'run');
   $('btnChallenge').onclick = () => challenge && startChallenge(challenge);
   $('btnChallengeDismiss').onclick = () => { challenge = null; history.replaceState(null, '', location.pathname + location.search); renderHome(); };
   $('btnInstall').onclick = async () => { if (!installPrompt) return; installPrompt.prompt(); try { await installPrompt.userChoice; } catch (e) {} installPrompt = null; renderHome(); };
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; if (state === 'home') renderHome(); });
-  window.addEventListener('hashchange', () => { challenge = parseChallenge(location.hash); if (state === 'home') renderHome(); });
+  window.addEventListener('hashchange', () => { if (checkThanks()) return; challenge = parseChallenge(location.hash); if (state === 'home') renderHome(); });
   challenge = parseChallenge(location.hash);
+  setTimeout(checkThanks, 400);
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   }
