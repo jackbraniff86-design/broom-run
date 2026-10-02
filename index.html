@@ -147,6 +147,23 @@ p { margin: 0; line-height: 1.45; }
 .earn-row .btn { text-decoration: none; text-align: center; min-width: 84px; }
 .earn-row.done { opacity: .5; }
 .toast { position: absolute; z-index: 20; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); max-width: calc(100% - 32px); background: var(--amber); color: #24170a; font-weight: 800; padding: 10px 16px; border-radius: 999px; box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: none; text-align: center; }
+.pubar { position: absolute; z-index: 5; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 10px; }
+.pu { appearance: none; position: relative; width: 58px; height: 58px; padding: 0; border-radius: 14px; border: 1px solid var(--edge); background: rgba(11,14,28,.72); cursor: pointer; }
+.pu canvas { display: block; width: 40px; height: 40px; margin: 8px auto 0; }
+.pu span { position: absolute; top: -7px; right: -7px; min-width: 20px; padding: 3px 6px; border-radius: 999px; background: var(--amber); color: #24170a; font: 800 12px/1 var(--ui); }
+.pu:disabled { opacity: .4; cursor: default; }
+.race-strip { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); top: calc(50px + env(safe-area-inset-top, 0px)); width: min(56%, 340px); pointer-events: none; }
+.rs-track { position: relative; height: 6px; border-radius: 3px; background: rgba(255,255,255,.16); }
+.rs-me, .rs-ghost { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; transform: translate(-50%, -50%); }
+.rs-me { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.rs-ghost { background: #cfe3ff; opacity: .75; }
+.rs-flag { position: absolute; top: 50%; width: 4px; height: 18px; border-radius: 2px; background: #cfe3ff; transform: translate(-50%, -50%); }
+.sw-offer { position: absolute; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.chk { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; color: var(--muted); cursor: pointer; }
+.chk input { width: 18px; height: 18px; accent-color: var(--amber); }
+.race-opts { display: flex; flex-direction: column; gap: 6px; }
+.race-opts label { font-size: 13px; color: var(--muted); }
+.race-opts input { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--edge); background: rgba(0,0,0,.3); color: var(--parchment); font: 16px var(--ui); }
 .school { gap: 16px; }
 .lore { display: flex; flex-direction: column; gap: 10px; max-width: 62ch; }
 .lore p { color: var(--parchment); font-size: 16px; }
@@ -187,6 +204,13 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     <div class="hud-coins"><span class="coin-dot"></span><span id="hudCoins">0</span></div>
   </div>
 
+  <div class="race-strip" id="raceStrip" hidden><div class="rs-track"><span class="rs-ghost" id="rsGhost"></span><span class="rs-flag" id="rsFlag" hidden></span><span class="rs-me" id="rsMe"></span></div></div>
+  <div class="pubar" id="puBar" hidden></div>
+  <div class="sw-offer" id="swOffer" hidden>
+    <button class="btn primary big" id="btnSecondWind" type="button">Second Wind</button>
+    <p class="fine" id="swText"></p>
+  </div>
+
   <section class="screen" id="home">
     <div class="panel">
       <p class="eyebrow" data-t="school"></p>
@@ -209,9 +233,11 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       </div>
       <div class="row">
         <button class="btn" id="btnFree" type="button">Free Fly</button>
+        <button class="btn" id="btnRace" type="button">Race a mate</button>
         <button class="btn" id="btnShed" type="button">Broom shed</button>
         <button class="btn" id="btnSchool" type="button">The school</button>
       </div>
+      <label class="chk" for="chkPU"><input type="checkbox" id="chkPU"> Races with power-ups (one Shield each)</label>
       <p class="fine" id="homeFound" style="text-align:center"></p>
       <div class="earn" id="earnCard">
         <p class="eyebrow">Earn coins</p>
@@ -259,6 +285,10 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       <p class="reward-line" id="resReward"></p>
       <button class="btn primary big" id="btnAgain" type="button">Fly again</button>
       <p class="fine" id="resAgainNote" style="text-align:center" hidden></p>
+      <div class="race-opts" id="raceOpts" hidden>
+        <label for="inpName">Your name on race links</label>
+        <input id="inpName" type="text" maxlength="16" placeholder="e.g. Jack" autocomplete="nickname">
+      </div>
       <p class="prompt" id="resPrompt" hidden></p>
       <div class="row">
         <button class="btn" id="btnShare" type="button">Share</button>
@@ -286,6 +316,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
         <button class="tab" role="tab" data-kind="broom" aria-selected="true" type="button">Brooms</button>
         <button class="tab" role="tab" data-kind="cloak" aria-selected="false" type="button">Cloaks</button>
         <button class="tab" role="tab" data-kind="trail" aria-selected="false" type="button">Trails</button>
+        <button class="tab" role="tab" data-kind="pu" aria-selected="false" type="button">Power-ups</button>
       </div>
       <div class="grid" id="shedGrid"></div>
     </div>
@@ -350,6 +381,8 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       streak: { count: 0, last: null },
       daily: { day: null, goes: 0, best: 0 },
       rewards: { email: false, feedback: false, shareDay: null },
+      inv: { shield: 0, slow: 0, magnet: 0, second: 0 },
+      name: '', tally: {}, racePU: false,
       sound: false
     };
   }
@@ -364,7 +397,9 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
         pity: Object.assign(f.pity, s.pity || {}),
         streak: Object.assign(f.streak, s.streak || {}),
         daily: Object.assign(f.daily, s.daily || {}),
-        rewards: Object.assign(f.rewards, s.rewards || {})
+        rewards: Object.assign(f.rewards, s.rewards || {}),
+        inv: Object.assign(f.inv, s.inv || {}),
+        tally: Object.assign({}, s.tally || {})
       });
     }
   } catch (e) {}
@@ -600,7 +635,9 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
 
   // ---------------- run state ----------------
   let state = 'home', mode = 'free', runDay = null, runSeed = 0, runTarget = 0, runCourseDay = null, runOpts = {}, targetBeaten = false;
-  let challenge = null;
+  let challenge = null, raceIn = null;
+  let ghost = null, ghostDone = false, raceOpp = null, racePU = false, rec = [], runInv = null;
+  let shieldOn = false, slowT = 0, magnetT = 0, invuln = 0, secondUsed = false, spectateT = 0, crashM = 0;
   let course = null, camX = 0, runTime = 0, speed = BASE;
   let player = { y: H / 2, vy: 0 }, holding = false;
   let coinsRun = 0, closeCount = 0, parts = [], texts = [], banners = [], shake = 0, lastResult = null;
@@ -638,18 +675,28 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     }
     stats = flyStats();
     started = false;
+    ghost = opts.ghost || null; ghostDone = false;
+    raceOpp = opts.opponent || (ghost && ghost.name) || null;
+    racePU = m === 'race' && !!opts.pu;
+    rec = [];
+    // Daily Flight and challenge runs are power-up free; races only get the shared Shield when switched on
+    runInv = m === 'free' ? save.inv : racePU ? { shield: 1 } : null;
+    shieldOn = false; slowT = 0; magnetT = 0; invuln = 0; secondUsed = false; spectateT = 0;
     newCourse(seed, false);
     player = { y: H / 2, vy: 0 };
     coinsRun = 0; closeCount = 0; parts = []; texts = []; banners = []; shake = 0;
     state = 'playing';
     holding = false;
-    $('hudMode').textContent = modeLabel(m, runCourseDay) + (runTarget ? ' · beat ' + fmt(runTarget) + ' m' : '');
+    $('hudMode').textContent = modeLabel(m, runCourseDay, raceOpp) + (runTarget ? ' · beat ' + fmt(runTarget) + ' m' : '');
     show(null);
     $('hud').hidden = false;
+    $('raceStrip').hidden = !ghost;
+    renderPU();
     $('stage').focus({ preventScroll: true });
   }
 
-  function modeLabel(m, courseDay) {
+  function modeLabel(m, courseDay, opp) {
+    if (m === 'race') return 'Race' + (opp ? ' v ' + opp : '');
     const n = dailyNumber(courseDay || runDay || dayKey());
     if (m === 'daily') return T.modes.daily + ' #' + n;
     if (m === 'challenge') return 'Challenge' + (courseDay ? ' · ' + T.modes.daily + ' #' + n : '');
@@ -665,16 +712,36 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       const a = Math.random() * 6.28, s = 60 + Math.random() * 260;
       parts.push({ x: PX, y: player.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: .5 + Math.random() * .6, max: 1.1, c: Math.random() < .5 ? PAL.flame : '#ffffff', r: 1 + Math.random() * 2 });
     }
-    const m = Math.floor(camX / PXM);
+    crashM = Math.floor(camX / PXM);
+    $('puBar').hidden = true;
+    if (mode === 'free' && !secondUsed && save.inv.second > 0) { offerSecondWind(); return; }
+    proceedAfterCrash();
+  }
+  // if the ghost is still flying, watch it finish before the result
+  function proceedAfterCrash() {
+    if (ghost && !ghostDone && ghost.m > crashM) { state = 'spectate'; spectateT = 0; return; }
+    finishRun();
+  }
+  function finishRun() {
+    state = 'crashed';
+    const m = crashM;
     const counted = true;
     const prevBest = save.best;
     save.flights++; save.total += m; save.coins += coinsRun;
     if (m > save.best) save.best = m;
     if (mode === 'daily' && save.daily.day === runDay) save.daily.best = Math.max(save.daily.best, m);
+    let outcome = null;
+    if (mode === 'race' && ghost) {
+      outcome = m > ghost.m ? 'win' : m < ghost.m ? 'loss' : 'draw';
+      const t = tallyFor(ghost.name);
+      if (outcome === 'win') t.me++; else if (outcome === 'loss') t.them++;
+      t.last = { outcome, d: Math.abs(m - ghost.m) };
+    }
     persist();
-    lastResult = { m, mode, prevBest, isBest: m > prevBest && m > 0, coinsRun, counted, reward: null, n: dailyNumber(runCourseDay || runDay), seed: runSeed, courseDay: runCourseDay, target: runTarget, opts: runOpts };
+    lastResult = { m, mode, prevBest, isBest: m > prevBest && m > 0, coinsRun, counted, reward: null, n: dailyNumber(runCourseDay || runDay), seed: runSeed, courseDay: runCourseDay, target: runTarget, opts: runOpts,
+      ghost: Uint8Array.from(rec), opponent: raceOpp, pu: racePU, ghostM: ghost ? ghost.m : null, outcome };
     setTimeout(() => {
-      $('hud').hidden = true;
+      $('hud').hidden = true; $('raceStrip').hidden = true; $('puBar').hidden = true;
       if (counted) openBox(m); else showResult();
     }, 800);
   }
@@ -697,6 +764,10 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   }
   function grant(tier) {
     save.boxes++;
+    const givePU = kind => { save.inv[kind] = (save.inv[kind] || 0) + 1; return { tier, pu: kind }; };
+    if (tier === 'common' && Math.random() < .25) return givePU('magnet');
+    if (tier === 'uncommon') { const r = Math.random(); if (r < .3) return givePU('shield'); if (r < .5) return givePU('slow'); }
+    if (tier === 'rare' && Math.random() < .25) return givePU('second');
     if (tier === 'common') { const coins = 10 + Math.floor(Math.random() * 41); save.coins += coins; return { tier, coins }; }
     const pool = ITEMS.filter(i => i.tier === tier && !i.starter);
     const fresh = pool.filter(i => !save.owned[i.id]);
@@ -755,6 +826,13 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       if (res.item.lore) $('revSub').textContent += ' ' + res.item.lore;
       $('btnEquipNow').hidden = !res.isNew;
       $('btnShareFind').hidden = !(res.tier === 'legendary' && res.isNew);
+    } else if (res.pu) {
+      const c = art.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, art.width, art.height);
+      drawPUIcon(c, res.pu, art.width / 2, art.height / 2, art.height * .32);
+      $('revName').textContent = T.powerups[res.pu].name;
+      $('revSub').textContent = T.powerups[res.pu].desc + ' You have ' + save.inv[res.pu] + '.' + (res.pu === 'second' ? '' : ' Use it in Free Fly.');
+      $('btnEquipNow').hidden = true;
+      $('btnShareFind').hidden = true;
     } else {
       drawCoinArt(art);
       $('revName').textContent = '+' + res.coins + ' ' + T.currency.many;
@@ -775,13 +853,17 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   function showResult() {
     const r = lastResult;
     show('result');
-    $('resMode').textContent = modeLabel(r.mode, r.courseDay);
+    $('resMode').textContent = modeLabel(r.mode, r.courseDay, r.opponent);
     $('resDist').textContent = fmt(r.m);
     const msg = $('resMsg');
     msg.classList.toggle('best', r.isBest);
     if (r.target) {
       msg.classList.toggle('best', r.m > r.target);
       msg.textContent = r.m > r.target ? tpl(T.text.challengeBeat, { d: r.m - r.target }) : tpl(T.text.challengeShort, { d: r.target - r.m, m: fmt(r.target) });
+    }
+    else if (r.mode === 'race' && r.ghostM != null) {
+      msg.classList.toggle('best', r.outcome === 'win');
+      msg.textContent = 'You ' + fmt(r.m) + ' m \u00b7 ' + r.opponent + ' ' + fmt(r.ghostM) + ' m \u00b7 ' + (r.outcome === 'win' ? 'You win' : r.outcome === 'loss' ? r.opponent + ' wins' : 'Dead heat');
     }
     else if (r.isBest) msg.textContent = T.text.newBest;
     else if (r.prevBest > 0 && r.prevBest - r.m <= 60) msg.textContent = tpl(T.text.offBest, { m: r.prevBest - r.m });
@@ -792,6 +874,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     const rw = r.reward;
     $('resReward').textContent = !r.counted ? 'Practice run: no parcel, and it doesn’t count for today.'
       : !rw ? ''
+      : rw.pu ? T.text.boxName + ': ' + T.powerups[rw.pu].name
       : rw.item ? T.text.boxName + ': ' + rw.item.name + (rw.dup ? ' (duplicate, +' + rw.dup + ' ' + T.currency.many + ')' : '')
       : T.text.boxName + ': +' + rw.coins + ' ' + T.currency.many;
     const againMode = nextMode(r.mode);
@@ -816,6 +899,24 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     $('btnShare').className = 'btn' + (prompt ? ' primary' : '');
     $('btnShare').textContent = r.target && r.m > r.target ? 'Send it back' : 'Share';
     $('btnCopyLink').textContent = 'Copy challenge link';
+    // ghost races: rematch loop and head-to-head tally
+    const race = r.mode === 'race';
+    $('raceOpts').hidden = !(race || r.mode === 'free');
+    $('inpName').value = save.name;
+    if (race) {
+      const t = r.opponent ? tallyFor(r.opponent) : null;
+      $('resAgainNote').hidden = !(t && t.me + t.them);
+      if (t) $('resAgainNote').textContent = 'You v ' + r.opponent + ' ' + t.me + '\u2013' + t.them;
+      $('btnAgain').textContent = r.ghostM != null ? 'Rematch' : 'Fly again';
+      $('btnShare').className = 'btn primary';
+      $('btnShare').textContent = r.ghostM != null ? 'Send it back' : 'Send to ' + (r.opponent || 'a mate');
+      $('btnCopyLink').textContent = 'Copy race link';
+      $('resPrompt').textContent = r.ghostM != null ? 'Rematch flies a fresh course. Your ghost goes back to ' + r.opponent + '.' : 'Your ghost is ready. Send it and see if they can beat ' + fmt(r.m) + ' m.';
+      $('resPrompt').hidden = false;
+    } else if (r.mode === 'free') {
+      $('btnShare').textContent = 'Race a mate';
+      $('btnCopyLink').textContent = 'Copy race link';
+    }
     // cross-promotion after the Daily Flight
     const daily = r.mode === 'daily';
     $('resCross').hidden = !daily || !T.links.daily5;
@@ -832,6 +933,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   //   #f1k9xq2-640    = a Free Fly course by seed, beat 640 m
   const shareM = r => r.mode === 'daily' && save.daily.day === r.courseDay ? Math.max(r.m, save.daily.best) : r.m;
   function shareLink(r) {
+    if (r.mode === 'race' || r.mode === 'free') return raceLink(r);
     const tag = r.courseDay ? 'd' + r.courseDay.replace(/-/g, '') : 'f' + (r.seed >>> 0).toString(36);
     return T.links.site + '#' + tag + '-' + shareM(r);
   }
@@ -850,6 +952,12 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     else startRun('challenge', { seed: ch.day ? hashStr('broomrun-daily-' + ch.day) : ch.seed, day: ch.day || null, target: ch.m });
   }
   function shareText(r) {
+    if (r.mode === 'race' || r.mode === 'free') {
+      const t = r.opponent ? tallyFor(r.opponent) : null;
+      const last = t && t.last;
+      if (last) return tpl(last.outcome === 'win' ? T.text.raceWon : last.outcome === 'loss' ? T.text.raceLost : T.text.raceDraw, { d: fmt(last.d), tally: tallyText(t) });
+      return tpl(T.text.raceInvite, { m: fmt(r.m) });
+    }
     const base = r.courseDay ? tpl(T.text.shareText, { m: fmt(shareM(r)), n: r.n }) : tpl(T.text.shareTextFree, { m: fmt(r.m) });
     const legendary = r.reward && r.reward.tier === 'legendary' && r.reward.isNew;
     return legendary ? base + ' Also found the ' + r.reward.item.name + ', a 2% drop.' : base;
@@ -936,7 +1044,8 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       text('I flew', h * (tall ? .27 : .32), 64, UI, '#efe3c6', '700');
       text(fmt(shareM(r)) + ' m', h * (tall ? .375 : .47), tall ? 230 : 170, UI, '#ffffff', '800');
       const beat = r.target && r.m > r.target ? ' · beat ' + fmt(r.target) + ' m' : '';
-      text(modeLabel(r.mode, r.courseDay) + beat, h * (tall ? .425 : .54), 46, UI, PAL.candle, '700');
+      const tl = r.mode === 'race' && r.opponent ? tallyFor(r.opponent) : null;
+      text(modeLabel(r.mode, r.courseDay, r.opponent) + beat + (tl && tl.me + tl.them ? ' \u00b7 ' + tl.me + '\u2013' + tl.them : ''), h * (tall ? .425 : .54), 46, UI, PAL.candle, '700');
       // the flyer, with a sparkle trail
       g.shadowBlur = 0;
       const fy = h * (tall ? .55 : .655), fs = (tall ? 5.6 : 3.2) * u;
@@ -987,8 +1096,18 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     $('homeCoins').textContent = fmt(save.coins);
     $('homeFound').textContent = foundCount() + ' of ' + ITEMS.length + ' brooms, cloaks and trails found';
     $('btnSound').textContent = 'Sound: ' + (save.sound ? 'on' : 'off');
-    $('challengeCard').hidden = !challenge;
-    if (challenge) {
+    $('chkPU').checked = !!save.racePU;
+    $('challengeCard').hidden = !challenge && !raceIn;
+    $('btnChallenge').hidden = false;
+    if (raceIn) {
+      const t = tallyFor(raceIn.name);
+      const tt = Math.max(t.me + t.them, raceIn.w + raceIn.l) ? ' You v ' + raceIn.name + ' ' + Math.max(t.me, raceIn.l) + '\u2013' + Math.max(t.them, raceIn.w) + '.' : '';
+      $('challengeText').textContent = raceIn.expired ? 'This race link has expired. Race links last ' + RACE_DAYS + ' days.'
+        : raceIn.name + ' flew ' + fmt(raceIn.m) + ' m and wants a race. Same course, with their ghost alongside you.' + tt + (raceIn.pu ? ' Power-ups on: one Shield each.' : '');
+      $('btnChallenge').textContent = 'Race ' + raceIn.name;
+      $('btnChallenge').hidden = raceIn.expired;
+    } else if (challenge) {
+      $('btnChallenge').textContent = 'Take the challenge';
       const locked = challenge.day === today && left <= 0;
       $('challengeText').textContent = locked
         ? 'A friend flew ' + fmt(challenge.m) + ' m on today\u2019s course. You\u2019ve used your goes: your best was ' + fmt(save.daily.best) + ' m' + (save.daily.best > challenge.m ? ', so you win.' : '.')
@@ -1058,6 +1177,21 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     document.querySelectorAll('#shedTabs .tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.kind === shedKind)));
     const grid = $('shedGrid');
     grid.innerHTML = '';
+    if (shedKind === 'pu') {
+      for (const k of ['shield', 'slow', 'magnet', 'second']) {
+        const card = document.createElement('div'); card.className = 'item';
+        const c = document.createElement('canvas'); c.width = 250; c.height = 150; drawPUIcon(c.getContext('2d'), k, 125, 75, 46);
+        const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = T.powerups[k].name;
+        const st = document.createElement('span'); st.className = 'st'; st.textContent = T.powerups[k].desc + ' You have ' + (save.inv[k] || 0) + '.';
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn';
+        if (PU_PRICE[k]) {
+          b.textContent = 'Buy \u00b7 ' + PU_PRICE[k] + ' ' + T.currency.many; b.disabled = save.coins < PU_PRICE[k];
+          b.onclick = () => { if (save.coins >= PU_PRICE[k]) { save.coins -= PU_PRICE[k]; save.inv[k] = (save.inv[k] || 0) + 1; persist(); sfx.coin(); renderShed(); } };
+        } else { b.textContent = 'Found in rare parcels'; b.disabled = true; }
+        card.append(c, nm, st, b); grid.appendChild(card);
+      }
+      return;
+    }
     for (const item of ITEMS.filter(i => i.kind === shedKind)) {
       const owned = !!save.owned[item.id], isEq = save.equipped[item.kind] === item.id;
       const card = document.createElement('div');
@@ -1114,6 +1248,157 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     }));
   }
 
+  // ---------------- ghost races ----------------
+  // A race link carries the course seed, the distance, the sender's name, their ghost (height every
+  // 4 m, one byte each) and the head-to-head tally, so no server is needed:
+  //   #race&s=<seed36>&m=<metres>&n=<name>&g=<ghost>&w=<sender wins>&l=<sender losses>&d=<yyyymmdd>&pu=1
+  const GSTEP = 4, GMAX = 1000, RACE_DAYS = 7;
+  const GHOST_BROOM = { color: '#cfe3ff', color2: '#eef5ff' }, GHOST_CLOAK = { color: '#8fa8d8', color2: '#eef5ff', stripe: '#ffffff' };
+  const b64 = bytes => { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  const unb64 = str => { const s = atob(str.replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s, ch => ch.charCodeAt(0)); };
+  const normName = n => (n || '').trim().toLowerCase();
+  function tallyFor(name) {
+    const k = normName(name);
+    if (!save.tally[k]) save.tally[k] = { name, me: 0, them: 0 };
+    return save.tally[k];
+  }
+  function tallyText(t) {
+    if (t.me > t.them) return t.me + '–' + t.them + ' to me';
+    if (t.them > t.me) return t.them + '–' + t.me + ' to you';
+    return t.me + '–' + t.them;
+  }
+  function raceLink(r) {
+    const p = new URLSearchParams({ s: (r.seed >>> 0).toString(36), m: String(r.m), n: (save.name || 'A friend').slice(0, 16), g: b64(r.ghost || []), d: dayKey().replace(/-/g, '') });
+    if (r.opponent) { const t = tallyFor(r.opponent); p.set('w', t.me); p.set('l', t.them); }
+    if (r.pu) p.set('pu', '1');
+    return T.links.site + '#race&' + p.toString();
+  }
+  function parseRace(hash) {
+    if (!hash || !hash.startsWith('#race&')) return null;
+    try {
+      const p = new URLSearchParams(hash.slice(6));
+      const d = p.get('d') || '';
+      const day = d.length === 8 ? d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6) : dayKey();
+      const age = Math.round((Date.parse(dayKey() + 'T12:00:00Z') - Date.parse(day + 'T12:00:00Z')) / 864e5);
+      const samples = unb64(p.get('g') || '');
+      return {
+        seed: parseInt(p.get('s'), 36) >>> 0, m: Math.max(0, parseInt(p.get('m'), 10) || 0), name: (p.get('n') || 'A friend').slice(0, 16),
+        samples, w: parseInt(p.get('w'), 10) || 0, l: parseInt(p.get('l'), 10) || 0, pu: p.get('pu') === '1', expired: age > RACE_DAYS
+      };
+    } catch (e) { return null; }
+  }
+  // the link carries the sender's view of the tally; adopt it if it has seen more races than we have
+  function adoptTally(ri) {
+    const t = tallyFor(ri.name);
+    if (ri.w + ri.l > t.me + t.them) { t.me = ri.l; t.them = ri.w; persist(); }
+  }
+  function startRaceIn(ri) {
+    adoptTally(ri);
+    startRun('race', { seed: ri.seed, ghost: { name: ri.name, samples: ri.samples, m: ri.m }, opponent: ri.name, pu: ri.pu });
+  }
+  function ghostY(d) {
+    const s = ghost.samples;
+    if (!s.length) return H / 2;
+    const i = d / GSTEP, i0 = Math.floor(i);
+    if (i0 >= s.length - 1) return s[s.length - 1] / 255 * H;
+    return (s[i0] + (s[i0 + 1] - s[i0]) * (i - i0)) / 255 * H;
+  }
+  function checkGhost() {
+    if (!ghost || ghostDone || camX / PXM < ghost.m) return;
+    ghostDone = true;
+    const gy = ghostY(ghost.m);
+    for (let i = 0; i < 36; i++) { const a = Math.random() * 6.28, sp = 60 + Math.random() * 200; parts.push({ x: PX, y: gy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: .7, max: .7, c: Math.random() < .5 ? '#cfe3ff' : '#ffffff', r: 1 + Math.random() * 2 }); }
+    if (state === 'playing') { addBanner(tpl(T.text.ghostBeaten, { name: ghost.name, m: fmt(ghost.m) })); sfx.reveal('rare'); }
+  }
+
+  // ---------------- power-ups ----------------
+  const PU_KINDS = ['shield', 'slow', 'magnet'];
+  const PU_PRICE = { shield: 150, slow: 100, magnet: 60 };
+  const puActive = () => shieldOn || slowT > 0 || magnetT > 0;
+  function usePU(kind) {
+    if (state !== 'playing' || !runInv || !(runInv[kind] > 0) || puActive()) return;
+    runInv[kind]--;
+    if (runInv === save.inv) persist();
+    if (kind === 'shield') shieldOn = true;
+    else if (kind === 'slow') { slowT = 4; tone(220, .6, 'sine', .08, 0, 110); }
+    else magnetT = 10;
+    texts.push({ x: PX + 14, y: player.y - 30, text: T.powerups[kind].name + '!', life: .9 });
+    renderPU();
+  }
+  function renderPU() {
+    const bar = $('puBar');
+    const kinds = runInv ? PU_KINDS.filter(k => runInv[k] > 0) : [];
+    bar.hidden = state !== 'playing' || !kinds.length;
+    bar.replaceChildren(...kinds.map((k, i) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'pu'; b.dataset.kind = k; b.disabled = puActive();
+      b.title = T.powerups[k].name + ' (key ' + (i + 1) + ')'; b.setAttribute('aria-label', T.powerups[k].name);
+      const c = document.createElement('canvas'); c.width = c.height = 80; drawPUIcon(c.getContext('2d'), k, 40, 40, 30);
+      const n = document.createElement('span'); n.textContent = runInv[k];
+      b.append(c, n); return b;
+    }));
+  }
+  function hit() { // true when the run is over
+    if (invuln > 0) return false;
+    if (shieldOn) {
+      shieldOn = false; invuln = 1.2;
+      const w = wallAt(course, camX + PX);
+      player.y = clamp(player.y, w.top + R + 4, w.bot - R - 4); player.vy *= -.3;
+      for (let i = 0; i < 30; i++) { const a = Math.random() * 6.28, sp = 80 + Math.random() * 160; parts.push({ x: PX, y: player.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: .6, max: .6, c: Math.random() < .5 ? '#9fd8ff' : '#ffffff', r: 1.2 + Math.random() * 2 }); }
+      texts.push({ x: PX + 14, y: player.y - 30, text: T.text.saved, life: 1.1 });
+      tone(880, .25, 'triangle', .08); tone(1320, .35, 'triangle', .06, .08);
+      renderPU();
+      return false;
+    }
+    crash();
+    return true;
+  }
+  let swTimer = null;
+  function offerSecondWind() {
+    $('btnSecondWind').textContent = T.powerups.second.name + ' (' + save.inv.second + ')';
+    $('swText').textContent = 'Carry on from here?';
+    $('swOffer').hidden = false;
+    clearTimeout(swTimer);
+    swTimer = setTimeout(() => { $('swOffer').hidden = true; if (state === 'crashed') proceedAfterCrash(); }, 3500);
+  }
+  function takeSecondWind() {
+    if (state !== 'crashed' || $('swOffer').hidden) return;
+    clearTimeout(swTimer); $('swOffer').hidden = true;
+    save.inv.second--; persist();
+    secondUsed = true;
+    const w = wallAt(course, camX + PX);
+    player.y = (w.top + w.bot) / 2; player.vy = 0;
+    invuln = 1.6; started = true; holding = false;
+    state = 'playing';
+    texts.push({ x: PX + 14, y: player.y - 30, text: T.powerups.second.name + '!', life: 1.1 });
+    renderPU();
+  }
+  function drawPUIcon(c, kind, x, y, r) {
+    c.save(); c.translate(x, y);
+    if (kind === 'shield') {
+      const g = c.createRadialGradient(-r * .3, -r * .3, 1, 0, 0, r);
+      g.addColorStop(0, '#ffffff'); g.addColorStop(.4, '#9fd8ff'); g.addColorStop(1, 'rgba(60,140,230,.55)');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, 6.29); c.fill();
+      c.strokeStyle = '#d8f0ff'; c.lineWidth = r * .1; c.beginPath(); c.arc(0, 0, r * .92, 0, 6.29); c.stroke();
+    } else if (kind === 'slow') {
+      c.fillStyle = '#c99a4a'; c.fillRect(-r * .7, -r, r * 1.4, r * .16); c.fillRect(-r * .7, r * .84, r * 1.4, r * .16);
+      c.fillStyle = 'rgba(220,235,255,.85)';
+      c.beginPath(); c.moveTo(-r * .55, -r * .84); c.lineTo(r * .55, -r * .84); c.lineTo(r * .08, 0); c.lineTo(r * .55, r * .84); c.lineTo(-r * .55, r * .84); c.lineTo(-r * .08, 0); c.closePath(); c.fill();
+      c.fillStyle = '#f2c230';
+      c.beginPath(); c.moveTo(-r * .3, -r * .5); c.lineTo(r * .3, -r * .5); c.lineTo(0, -r * .05); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(-r * .45, r * .84); c.lineTo(r * .45, r * .84); c.lineTo(0, r * .45); c.closePath(); c.fill();
+    } else if (kind === 'magnet') {
+      c.lineCap = 'butt'; c.lineWidth = r * .42;
+      c.strokeStyle = '#d83a3a'; c.beginPath(); c.arc(0, -r * .1, r * .6, Math.PI, 0); c.stroke();
+      c.beginPath(); c.moveTo(-r * .6, -r * .1); c.lineTo(-r * .6, r * .45); c.moveTo(r * .6, -r * .1); c.lineTo(r * .6, r * .45); c.stroke();
+      c.strokeStyle = '#e6e9ef'; c.beginPath(); c.moveTo(-r * .6, r * .45); c.lineTo(-r * .6, r * .85); c.moveTo(r * .6, r * .45); c.lineTo(r * .6, r * .85); c.stroke();
+    } else {
+      c.strokeStyle = '#bff3e6'; c.lineCap = 'round';
+      for (let i = 0; i < 3; i++) { c.lineWidth = r * (.16 - i * .03); c.beginPath(); c.arc(-r * .1, r * (i * .22 - .2), r * (.75 - i * .18), Math.PI * 1.1, Math.PI * 2.15); c.stroke(); }
+      c.fillStyle = '#ffffff'; c.beginPath(); c.arc(r * .55, -r * .55, r * .12, 0, 6.29); c.fill();
+    }
+    c.restore();
+  }
+
   // ---------------- screens ----------------
   const SCREENS = ['home', 'boxScreen', 'result', 'shed', 'school', 'pauseScreen'];
   function show(id) {
@@ -1123,7 +1408,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   }
   function goHome() {
     state = 'home';
-    $('hud').hidden = true;
+    $('hud').hidden = true; $('raceStrip').hidden = true; $('puBar').hidden = true; $('swOffer').hidden = true;
     newCourse((Math.random() * 4294967296) >>> 0, true);
     player = { y: H / 2, vy: 0 };
     renderHome();
@@ -1136,15 +1421,15 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   function step(dt) {
     runTime += dt;
     shake = Math.max(0, shake - dt * 30);
-    if (state !== 'playing' && state !== 'home' && state !== 'shed' && state !== 'school') return;
-    const playing = state === 'playing';
+    if (state !== 'playing' && state !== 'home' && state !== 'shed' && state !== 'school' && state !== 'spectate') return;
+    const playing = state === 'playing', spectating = state === 'spectate';
     if (playing && !started) {
       // the run waits for the first press, so nobody drops before they're ready
       if (holding) started = true;
       else { player.y = H / 2 + Math.sin(runTime * 3) * 6; player.vy = 0; return; }
     }
     const m = camX / PXM;
-    speed = playing ? speedAt(m) : 170;
+    speed = playing ? speedAt(m) : spectating ? speedAt(m) * 2.4 : 170;
     camX += speed * dt;
     const C = course;
     while (C.segs[C.segs.length - 1].x < camX + W + 160) genSeg(C);
@@ -1159,7 +1444,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       player.vy += (holding ? -up : down) * dt;
       player.vy = clamp(player.vy, -470 * (assist < 1 ? .85 : 1), 540 * (1 - stats.handling * .5) * assist);
       player.y += player.vy * dt;
-    } else {
+    } else if (!spectating) {
       const w = wallAt(C, px + 90);
       const target = (w.top + w.bot) / 2 + Math.sin(runTime * 1.3) * 40;
       const ny = player.y + (target - player.y) * Math.min(1, dt * 2.4);
@@ -1173,17 +1458,30 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     for (const p of C.passages) if (!p.announced && p.x0 - camX < W) { p.announced = true; addBanner(T.obstacles.passage); }
 
     for (const o of C.obstacles) o.g = geom(o);
+    if (spectating) {
+      spectateT += dt; checkGhost();
+      if (ghostDone || spectateT > 4.5) { state = 'crashed'; finishRun(); }
+      return;
+    }
     if (!playing) return;
+    const dNow = camX / PXM;
+    while (rec.length < GMAX && dNow >= rec.length * GSTEP) rec.push(Math.round(clamp(player.y / H, 0, 1) * 255));
+    checkGhost();
+    if (invuln > 0) { const w = wallAt(C, px); player.y = clamp(player.y, w.top + R + 2, w.bot - R - 2); }
+    if (magnetT > 0) for (const c of C.coins) {
+      const dx = px - c.x, dy = player.y - c.y, dd = Math.hypot(dx, dy);
+      if (dd < 160 && dd > 1) { c.x += dx / dd * 420 * dt; c.y += dy / dd * 420 * dt; }
+    }
     if (runTarget && !targetBeaten && px > runTarget * PXM) { targetBeaten = true; addBanner(T.text.challengeBeaten); sfx.reveal('rare'); }
 
     for (const dx of [-R * .8, 0, R * .8]) {
       const w = wallAt(C, px + dx), half = dx ? R * .6 : R;
-      if (player.y - half < w.top || player.y + half > w.bot) return crash();
+      if (player.y - half < w.top || player.y + half > w.bot) { if (hit()) return; break; }
     }
     for (const o of C.obstacles) {
       let minC = 1e9, right = -1e9;
       for (const s of o.g) { minC = Math.min(minC, clearance(s, px, player.y)); right = Math.max(right, rightEdge(s)); }
-      if (minC < 0) return crash();
+      if (minC < 0) { if (hit()) return; continue; }
       if (!o.done) {
         if (Math.abs(right - px) < 160) o.minClear = Math.min(o.minClear, minC);
         if (right < px - R - 2) {
@@ -1654,7 +1952,37 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
     for (const p of parts) { ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.29); ctx.fill(); }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 
-    if (state !== 'crashed' && state !== 'box' && state !== 'result') drawFlyer(ctx, PX, player.y, player.vy, t, equipped('broom'), equipped('cloak'));
+    if (ghost && !ghostDone && ['playing', 'paused', 'spectate', 'crashed'].includes(state)) {
+      const d = camX / PXM, gy = started ? ghostY(d) : player.y;
+      const gvy = started ? (ghostY(d + 2) - ghostY(d)) * speed / (2 * PXM) : 0;
+      ctx.save(); ctx.globalAlpha = .42; drawFlyer(ctx, PX, gy, gvy, t, GHOST_BROOM, GHOST_CLOAK); ctx.restore();
+      ctx.font = '800 15px "Alegreya Sans", sans-serif'; ctx.textAlign = 'center';
+      ctx.shadowColor = 'rgba(0,0,0,.9)'; ctx.shadowBlur = 6; ctx.fillStyle = '#e6f0ff';
+      ctx.fillText(ghost.name, PX + 4, gy - 52); ctx.shadowBlur = 0;
+    }
+    if (state !== 'crashed' && state !== 'box' && state !== 'result' && state !== 'spectate') {
+      ctx.save();
+      if (invuln > 0) ctx.globalAlpha = .45 + .45 * Math.abs(Math.sin(t * 18));
+      drawFlyer(ctx, PX, player.y, player.vy, t, equipped('broom'), equipped('cloak'));
+      ctx.restore();
+      if (shieldOn) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createRadialGradient(PX, player.y - 8, 10, PX, player.y - 8, 46);
+        g.addColorStop(0, 'rgba(120,200,255,0)'); g.addColorStop(.8, 'rgba(120,200,255,.28)'); g.addColorStop(1, 'rgba(200,235,255,.55)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(PX, player.y - 8, 46, 0, 6.29); ctx.fill(); ctx.restore();
+      }
+      if (magnetT > 0) {
+        ctx.strokeStyle = 'rgba(242,194,48,' + (.25 + .2 * Math.sin(t * 8)) + ')'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(PX, player.y - 6, 60 + 8 * Math.sin(t * 6), 0, 6.29); ctx.stroke();
+      }
+    }
+    if (slowT > 0) { ctx.fillStyle = 'rgba(80,120,255,.10)'; ctx.fillRect(0, -EXT, W, H + EXT * 2); }
+    if (state === 'spectate' && ghost) {
+      ctx.font = '400 ' + (W < 560 ? 24 : 30) + 'px "Uncial Antiqua", Georgia, serif'; ctx.textAlign = 'center';
+      ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 10; ctx.fillStyle = '#cfe3ff';
+      ctx.fillText(tpl(T.text.ghostAhead, { name: ghost.name, d: fmt(Math.max(0, Math.floor(camX / PXM) - crashM)) }), W / 2, H * .5 - 110);
+      ctx.shadowBlur = 0;
+    }
 
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     for (const tx of texts) {
@@ -1685,6 +2013,15 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   // ---------------- HUD ----------------
   let hudM = -1, hudC = -1;
   function hud() {
+    if (ghost && (state === 'playing' || state === 'spectate')) {
+      const d = camX / PXM, sc = Math.max(500, Math.ceil((d + 150) / 500) * 500);
+      const meD = state === 'spectate' ? crashM : d, gD = ghostDone ? ghost.m : d;
+      $('rsMe').style.left = Math.min(100, meD / sc * 100) + '%';
+      $('rsGhost').style.left = Math.min(100, gD / sc * 100) + '%';
+      $('rsGhost').hidden = ghostDone;
+      $('rsFlag').hidden = !ghostDone;
+      if (ghostDone) $('rsFlag').style.left = Math.min(100, ghost.m / sc * 100) + '%';
+    }
     if (state !== 'playing') return;
     const m = Math.floor(camX / PXM);
     if (m !== hudM) { $('hudDist').textContent = fmt(m); hudM = m; }
@@ -1712,6 +2049,7 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
       else if (state === 'result') $('btnAgain').click();
       else if (state === 'box') boxRevealed ? $('btnBoxContinue').click() : revealBox();
     } else if ((e.code === 'Escape' || e.code === 'KeyP') && state === 'playing') pause();
+    else if (/^Digit[1-3]$/.test(e.code) && state === 'playing') { const b = $('puBar').querySelectorAll('.pu')[+e.code.slice(5) - 1]; if (b) usePU(b.dataset.kind); }
   });
   window.addEventListener('keyup', e => { if (flyKey(e)) holding = false; });
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
@@ -1720,6 +2058,11 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
 
   $('btnDaily').onclick = () => startRun('daily');
   $('btnFree').onclick = () => startRun('free');
+  $('btnRace').onclick = () => startRun('race', { seed: (Math.random() * 4294967296) >>> 0, pu: save.racePU });
+  $('chkPU').onchange = e => { save.racePU = e.target.checked; persist(); };
+  $('inpName').oninput = e => { save.name = e.target.value.trim().slice(0, 16); persist(); };
+  $('puBar').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); const b = e.target.closest('.pu'); if (b && !b.disabled) usePU(b.dataset.kind); });
+  $('btnSecondWind').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); takeSecondWind(); });
   $('btnShed').onclick = () => { state = 'shed'; renderShed(); show('shed'); };
   $('btnShedClose').onclick = () => { state = 'home'; renderHome(); show('home'); };
   $('btnSchool').onclick = () => { state = 'school'; renderSchool(); show('school'); };
@@ -1731,7 +2074,8 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   $('btnAgain').onclick = () => {
     if (!lastResult) return;
     const r = lastResult, nm = nextMode(r.mode);
-    if (nm === 'daily') startRun('daily', r.target ? { target: r.target } : {});
+    if (r.mode === 'race') startRun('race', { seed: (Math.random() * 4294967296) >>> 0, opponent: r.opponent, pu: r.pu });
+    else if (nm === 'daily') startRun('daily', r.target ? { target: r.target } : {});
     else if (r.target && nm === 'challenge') startRun('challenge', r.opts);
     else startRun(nm);
   };
@@ -1742,12 +2086,13 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   $('btnEarnShare').onclick = e => shareInvite(e.currentTarget);
   $('btnSaveStory').onclick = () => saveCard(1080, 1920, 'run');
   $('btnSaveSquare').onclick = () => saveCard(1080, 1080, 'run');
-  $('btnChallenge').onclick = () => challenge && startChallenge(challenge);
-  $('btnChallengeDismiss').onclick = () => { challenge = null; history.replaceState(null, '', location.pathname + location.search); renderHome(); };
+  $('btnChallenge').onclick = () => { if (raceIn && !raceIn.expired) startRaceIn(raceIn); else if (challenge) startChallenge(challenge); };
+  $('btnChallengeDismiss').onclick = () => { challenge = null; raceIn = null; history.replaceState(null, '', location.pathname + location.search); renderHome(); };
   $('btnInstall').onclick = async () => { if (!installPrompt) return; installPrompt.prompt(); try { await installPrompt.userChoice; } catch (e) {} installPrompt = null; renderHome(); };
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; if (state === 'home') renderHome(); });
-  window.addEventListener('hashchange', () => { if (checkThanks()) return; challenge = parseChallenge(location.hash); if (state === 'home') renderHome(); });
+  window.addEventListener('hashchange', () => { if (checkThanks()) return; challenge = parseChallenge(location.hash); raceIn = parseRace(location.hash); if (state === 'home') renderHome(); });
   challenge = parseChallenge(location.hash);
+  raceIn = parseRace(location.hash);
   setTimeout(checkThanks, 400);
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
@@ -1759,7 +2104,15 @@ h3.sec { margin-top: 6px; color: var(--amber-soft); }
   function loop(now) {
     const dt = Math.min(.1, (now - last) / 1000); last = now;
     acc += dt;
-    while (acc >= STEP) { step(STEP); acc -= STEP; }
+    while (acc >= STEP) {
+      step(slowT > 0 ? STEP * .5 : STEP);
+      if (state === 'playing') {
+        const was = puActive();
+        slowT = Math.max(0, slowT - STEP); magnetT = Math.max(0, magnetT - STEP); invuln = Math.max(0, invuln - STEP);
+        if (was && !puActive()) renderPU();
+      }
+      acc -= STEP;
+    }
     updateFx(dt);
     draw(); hud();
     requestAnimationFrame(loop);

@@ -60,7 +60,15 @@ window.THEME = {
   },
 
   kinds: { broom: 'Broom', cloak: 'Cloak', trail: 'Trail' },
-  kindsPlural: { broom: 'Brooms', cloak: 'Cloaks', trail: 'Trails' },
+  kindsPlural: { broom: 'Brooms', cloak: 'Cloaks', trail: 'Trails', pu: 'Power-ups' },
+
+  // Single-use items carried into Free Fly (and ghost races with power-ups on). Never in the Daily Flight.
+  powerups: {
+    shield: { name: 'Shield', desc: 'Absorbs one crash.' },
+    slow:   { name: 'Slow Charm', desc: 'Slows the castle to half speed for 4 seconds.' },
+    magnet: { name: 'Coin Magnet', desc: 'Pulls nearby coins in for 10 seconds.' },
+    second: { name: 'Second Wind', desc: 'After a crash, carry on from that spot once. Free Fly only.' }
+  },
   stats: { lift: 'lift', handling: 'handling' },
 
   text: {
@@ -79,6 +87,13 @@ window.THEME = {
     challengeBeat: 'You beat it by {d} m',
     challengeShort: '{d} m short of {m} m',
     challengeBeaten: 'Challenge beaten!',
+    raceInvite: 'I flew {m} m in Broom Run. Race my ghost? \u{1F9F9}',
+    raceWon: 'Beat you by {d} m \u{1F9F9} {tally}. Rematch?',
+    raceLost: 'You beat me by {d} m \u{1F9F9} {tally}. Rematch?',
+    raceDraw: 'Dead heat \u{1F9F9} {tally}. Rematch?',
+    ghostAhead: '{name}: +{d} m',
+    ghostBeaten: 'You\u2019ve beaten {name}\u2019s {m} m',
+    saved: 'Saved!',
     daily5: 'Fancy five quick sport questions? Play today\u2019s Daily 5.',
     newsletter: 'Get tomorrow\u2019s flight and five at 7am.',
     crashLines: [
