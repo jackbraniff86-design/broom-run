@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Broom Run assets</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Uncial+Antiqua&family=Alegreya+Sans:wght@700;800&display=swap">
+<style>
+  body { background: #222; color: #ddd; font: 14px system-ui; margin: 16px; }
+  canvas { display: block; margin: 8px 0; max-width: 100%; outline: 1px solid #444; }
+</style>
+</head>
+<body>
+<p>Renders the home-screen icons and link-preview image. Run <code>python3 tools/save_server.py</code>, open <code>http://localhost:5192/tools/assets.html</code>, then click Save.</p>
+<button id="save" type="button">Save all</button> <span id="out"></span>
+<div id="wrap"></div>
+<script src="../theme.js"></script>
+<script>
+const T = window.THEME, PAL = T.palette;
+const shade = (hex, amt) => { const n = parseInt(hex.slice(1), 16); const c = v => Math.max(0, Math.min(255, v + amt)); return 'rgb(' + c(n >> 16) + ',' + c(n >> 8 & 255) + ',' + c(n & 255) + ')'; };
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const starter = k => T.items.find(i => i.kind === k && i.starter);
+
+// same figure as the game
+function drawBroomShape(c, broom) {
+  c.strokeStyle = broom.color; c.lineWidth = 4; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(-36, 8); c.lineTo(28, 3); c.stroke();
+  c.fillStyle = broom.color2;
+  c.beginPath(); c.moveTo(-34, 6); c.lineTo(-58, -2); c.lineTo(-63, 8); c.lineTo(-58, 19); c.lineTo(-34, 11); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,.25)'; c.lineWidth = 1;
+  for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(-36, 7 + i); c.lineTo(-60, 1 + i * 5); c.stroke(); }
+  c.fillStyle = shade(broom.color, -30); c.fillRect(-37, 4, 5, 9);
+}
+function drawFlyer(c, broom, cloak) {
+  c.save(); c.rotate(-.3); c.lineCap = 'round'; c.lineJoin = 'round';
+  const scarf = () => { c.beginPath(); c.moveTo(3, -22); c.quadraticCurveTo(-12, -19, -30, -14); c.stroke(); };
+  c.strokeStyle = cloak.color2; c.lineWidth = 5; scarf();
+  c.strokeStyle = cloak.stripe; c.setLineDash([3, 4]); scarf(); c.setLineDash([]);
+  drawBroomShape(c, broom);
+  c.fillStyle = cloak.color;
+  c.beginPath(); c.moveTo(-14, 7); c.lineTo(-3, -22); c.lineTo(9, -22); c.lineTo(13, 4); c.lineTo(4, 16); c.lineTo(-8, 14); c.closePath(); c.fill();
+  c.fillStyle = cloak.color2; c.beginPath(); c.moveTo(-14, 7); c.lineTo(-8, 14); c.lineTo(-11, 9); c.closePath(); c.fill();
+  c.strokeStyle = cloak.color; c.lineWidth = 5; c.beginPath(); c.moveTo(4, 6); c.lineTo(10, 16); c.stroke();
+  c.lineWidth = 4; c.beginPath(); c.moveTo(6, -16); c.lineTo(17, 2); c.stroke();
+  c.fillStyle = '#f0c9a0'; c.beginPath(); c.arc(18, 3, 2.5, 0, 6.29); c.fill();
+  c.beginPath(); c.arc(5, -29, 7.5, 0, 6.29); c.fill();
+  c.fillStyle = '#231710'; c.beginPath(); c.arc(4, -31, 8, Math.PI * .92, Math.PI * 2.05); c.fill();
+  for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(-3 + i * 3, -36); c.lineTo(-8 + i * 2.6, -41 - (i % 2) * 2.5); c.lineTo(i * 3, -37); c.fill(); }
+  c.strokeStyle = '#141414'; c.lineWidth = 1.3;
+  c.beginPath(); c.arc(10, -29, 2.8, 0, 6.29); c.stroke();
+  c.restore();
+}
+function sky(g, w, h) {
+  const bg = g.createRadialGradient(w * .7, h * .25, 0, w * .5, h * .5, Math.max(w, h) * .8);
+  bg.addColorStop(0, '#24306a'); bg.addColorStop(1, PAL.night);
+  g.fillStyle = bg; g.fillRect(0, 0, w, h);
+  const r = mulberry32(3); g.fillStyle = '#fff';
+  for (let i = 0; i < w * h / 4000; i++) { g.globalAlpha = .3 + r() * .6; const s = 1 + r() * (w / 400); g.fillRect(r() * w, r() * h, s, s); }
+  g.globalAlpha = 1;
+}
+function moon(g, x, y, r) {
+  const gl = g.createRadialGradient(x, y, r * .3, x, y, r * 3); gl.addColorStop(0, 'rgba(243,234,210,.35)'); gl.addColorStop(1, 'rgba(243,234,210,0)');
+  g.fillStyle = gl; g.fillRect(x - r * 3, y - r * 3, r * 6, r * 6);
+  g.fillStyle = PAL.moon; g.beginPath(); g.arc(x, y, r, 0, 6.29); g.fill();
+}
+function towers(g, w, h, base, s) {
+  g.fillStyle = '#121633';
+  const T2 = [[.02, .32, .11], [.14, .5, .08], [.24, .26, .14], [.4, .38, .09], [.52, .22, .16]];
+  for (const [x, th, tw] of T2) {
+    const X = x * w, W = tw * w, Ht = th * h * s;
+    g.fillRect(X, base - Ht, W, h);
+    g.beginPath(); g.moveTo(X - W * .12, base - Ht); g.lineTo(X + W / 2, base - Ht - W * 1.1); g.lineTo(X + W * 1.12, base - Ht); g.fill();
+  }
+}
+
+function icon(size, maskable) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d');
+  sky(g, size, size);
+  const k = maskable ? .78 : 1; // keep the art inside the maskable safe zone
+  g.save(); g.translate(size / 2, size / 2); g.scale(k, k); g.translate(-size / 2, -size / 2);
+  moon(g, size * .72, size * .28, size * .13);
+  towers(g, size, size, size * 1.02, .75);
+  // sparkle trail
+  const r = mulberry32(9);
+  for (let i = 0; i < 70; i++) {
+    const t = i / 70, x = size * (.08 + t * .42), y = size * (.86 - t * .3) + (r() - .5) * size * .05;
+    g.globalAlpha = .15 + .85 * t; g.fillStyle = r() < .7 ? PAL.flame : '#fff';
+    g.beginPath(); g.arc(x, y, size * (.004 + r() * .01), 0, 6.29); g.fill();
+  }
+  g.globalAlpha = 1;
+  g.save(); g.translate(size * .58, size * .56); g.scale(size / 120, size / 120); drawFlyer(g, starter('broom'), starter('cloak')); g.restore();
+  g.restore();
+  return c;
+}
+
+function og() {
+  const w = 1200, h = 630, c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  sky(g, w, h);
+  moon(g, w * .82, h * .24, 48);
+  towers(g, w, h, h * .98, .9);
+  const r = mulberry32(5);
+  for (let i = 0; i < 10; i++) {
+    const x = w * (.58 + r() * .38), y = h * (.08 + r() * .3), s = 2 + r() * 1.5;
+    const gl = g.createRadialGradient(x, y - 10 * s, 1, x, y - 10 * s, 34 * s); gl.addColorStop(0, 'rgba(255,179,71,.4)'); gl.addColorStop(1, 'rgba(255,179,71,0)');
+    g.fillStyle = gl; g.fillRect(x - 40 * s, y - 50 * s, 80 * s, 80 * s);
+    g.fillStyle = '#e9dcc0'; g.fillRect(x - 2.5 * s, y - 8 * s, 5 * s, 16 * s);
+    g.fillStyle = PAL.flame; g.beginPath(); g.ellipse(x, y - 12 * s, 2.2 * s, 4.5 * s, 0, 0, 6.29); g.fill();
+  }
+  for (let i = 0; i < 90; i++) {
+    const t = i / 90; g.globalAlpha = .15 + .85 * t; g.fillStyle = r() < .7 ? PAL.flame : '#fff';
+    g.beginPath(); g.arc(w * (.5 + t * .28), h * (.78 - t * .16) + (r() - .5) * 20, 1.5 + r() * 3.5, 0, 6.29); g.fill();
+  }
+  g.globalAlpha = 1;
+  g.save(); g.translate(w * .83, h * .6); g.scale(3.4, 3.4); drawFlyer(g, starter('broom'), starter('cloak')); g.restore();
+  g.textAlign = 'left'; g.shadowColor = 'rgba(0,0,0,.7)'; g.shadowBlur = 16;
+  g.fillStyle = PAL.candle; g.font = '800 26px "Alegreya Sans", sans-serif'; g.fillText(T.school.toUpperCase(), 72, 170);
+  g.fillStyle = '#ffd27a'; g.font = '400 118px "Uncial Antiqua", Georgia, serif'; g.fillText(T.name, 64, 290);
+  g.fillStyle = '#efe3c6'; g.font = '700 38px "Alegreya Sans", sans-serif';
+  g.fillText('Fly the castle. One Daily Flight a day.', 72, 360);
+  g.fillText('Can you beat your mates?', 72, 408);
+  g.shadowBlur = 0;
+  g.fillStyle = '#f0a83c'; g.beginPath(); g.roundRect(72, 456, 230, 70, 16); g.fill();
+  g.fillStyle = '#24170a'; g.font = '800 34px "Alegreya Sans", sans-serif'; g.fillText('Fly now', 120, 503);
+  return c;
+}
+
+let out = {};
+Promise.all(['400 40px "Uncial Antiqua"', '700 40px "Alegreya Sans"', '800 40px "Alegreya Sans"'].map(f => document.fonts.load(f))).then(() => document.fonts.ready).then(() => {
+  out = {
+    'icons/icon-192.png': icon(192, false),
+    'icons/icon-512.png': icon(512, false),
+    'icons/icon-maskable-512.png': icon(512, true),
+    'icons/apple-touch-icon.png': icon(180, false),
+    'og.jpg': og()
+  };
+  for (const [n, c] of Object.entries(out)) { const p = document.createElement('p'); p.textContent = n; document.getElementById('wrap').append(p, c); }
+});
+document.getElementById('save').onclick = async () => {
+  const res = [];
+  for (const [n, c] of Object.entries(out)) res.push(await (await fetch('/save?name=' + encodeURIComponent(n), { method: 'POST', body: n.endsWith('.jpg') ? c.toDataURL('image/jpeg', .86) : c.toDataURL('image/png') })).text());
+  document.getElementById('out').textContent = res.join(', ');
+};
+</script>
+</body>
+</html>
